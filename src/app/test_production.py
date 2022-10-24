@@ -1,11 +1,12 @@
+import io
 import shutil
 import time
-import io
-from fastapi.testclient import TestClient
-from app.main import BASE_DIR, UPLOAD_DIR, get_settings
 
-from PIL import Image, ImageChops
 import requests
+from fastapi.testclient import TestClient
+from PIL import Image, ImageChops
+
+from app.main import BASE_DIR, UPLOAD_DIR, get_settings
 
 ENDPOINT="https://fastapi-docker-l3j59.ondigitalocean.app/"
 
@@ -45,7 +46,7 @@ def test_prediction_upload():
             img = None
         response = requests.post(ENDPOINT,
             files={"file": open(path, 'rb')},
-            headers={"Authorization": f"JWT {settings.app_auth_token_prod}"}
+            headers={"Authorization": f"JWT {settings.secret_token}"}
         )
         if img is None:
             assert response.status_code == 400

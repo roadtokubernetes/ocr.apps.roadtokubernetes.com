@@ -1,28 +1,22 @@
-import pathlib
-import os
 import io
+import os
+import pathlib
 import uuid
 from functools import lru_cache
-from fastapi import(
-    FastAPI,
-    Header,
-    HTTPException,
-    Depends,
-    Request,
-    File,
-    UploadFile
-    )
+
 import pytesseract
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import (Depends, FastAPI, File, Header, HTTPException, Request,
+                     UploadFile)
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseSettings
 from PIL import Image
+from pydantic import BaseSettings
+
 
 class Settings(BaseSettings):
-    app_auth_token: str
+    secret_token: str = None
     debug: bool = False
     echo_active: bool = False
-    app_auth_token_prod: str = None
     skip_auth: bool = False
 
     class Config:
@@ -58,7 +52,7 @@ def verify_auth(authorization = Header(None), settings:Settings = Depends(get_se
     if authorization is None:
         raise HTTPException(detail="Invalid endpoint", status_code=401)
     label, token = authorization.split()
-    if token != settings.app_auth_token:
+    if token != settings.secret_token:
         raise HTTPException(detail="Invalid endpoint", status_code=401)
 
 

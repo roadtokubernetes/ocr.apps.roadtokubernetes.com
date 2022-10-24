@@ -1,10 +1,11 @@
+import io
 import shutil
 import time
-import io
-from fastapi.testclient import TestClient
-from app.main import app, BASE_DIR, UPLOAD_DIR, get_settings
 
+from fastapi.testclient import TestClient
 from PIL import Image, ImageChops
+
+from app.main import BASE_DIR, UPLOAD_DIR, app, get_settings
 
 client = TestClient(app)
 
@@ -45,7 +46,7 @@ def test_prediction_upload():
             img = None
         response = client.post("/",
             files={"file": open(path, 'rb')},
-            headers={"Authorization": f"JWT {settings.app_auth_token}"}
+            headers={"Authorization": f"JWT {settings.secret_token}"}
         )
         if img is None:
             assert response.status_code == 400
