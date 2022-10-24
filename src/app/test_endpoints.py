@@ -1,78 +1,58 @@
-import io
-import shutil
-import time
-
 from fastapi.testclient import TestClient
-from PIL import Image, ImageChops
+from PIL import Image
 
-from app.main import BASE_DIR, UPLOAD_DIR, app, get_settings
+from app.main import BASE_DIR, app
+from app.settings import get_settings
 
+TEST_IMAGE_DIR = BASE_DIR / "images"
 client = TestClient(app)
 
+
 def test_get_home():
-    response = client.get("/") # requests.get("") # python requests
+    response = client.get("/")  # requests.get("") # python requests
     assert response.text != "<h1>Hello world</h1>"
     assert response.status_code == 200
-    assert  "text/html" in response.headers['content-type']
-
+    assert "text/html" in response.headers["content-type"]
 
 
 def test_invalid_file_upload_error():
-    response = client.post("/") # requests.post("") # python requests
+    response = client.post("/")  # requests.post("") # python requests
     assert response.status_code == 422
-    assert  "application/json" in response.headers['content-type']
+    assert "application/json" in response.headers["content-type"]
+
 
 def test_prediction_upload_missing_headers():
-    img_saved_path = BASE_DIR / "images"
-    settings = get_settings()
-    for path in img_saved_path.glob("*"):
-        try:
-            img = Image.open(path)
-        except:
-            img = None
-        response = client.post("/",
-            files={"file": open(path, 'rb')}
-        )
+    for path in TEST_IMAGE_DIR.glob("*"):
+        response = client.post("/", files={"file": open(path, "rb")})
         assert response.status_code == 401
 
 
 def test_prediction_upload():
-    img_saved_path = BASE_DIR / "images"
     settings = get_settings()
-    for path in img_saved_path.glob("*"):
+    valid_images = []
+    invalid_images = []
+    for path in TEST_IMAGE_DIR.glob("*"):
         try:
             img = Image.open(path)
         except:
             img = None
-        response = client.post("/",
-            files={"file": open(path, 'rb')},
-            headers={"Authorization": f"JWT {settings.secret_token}"}
+        if img is not None:
+            valid_images.append(path)
+        else:
+            invalid_images.append(path)
+    for path in valid_images:
+        response = client.post(
+            "/",
+            files={"file": open(path, "rb")},
+            headers={"Authorization": f"JWT {settings.secret_token}"},
         )
-        if img is None:
-            assert response.status_code == 400
-        else:
-            # Returning a valid image
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data.keys()) == 2
-
-
-def test_echo_upload():
-    img_saved_path = BASE_DIR / "images"
-    for path in img_saved_path.glob("*"):
-        try:
-            img = Image.open(path)
-        except:
-            img = None
-        response = client.post("/img-echo/", files={"file": open(path, 'rb')})
-        if img is None:
-            assert response.status_code == 400
-        else:
-            # Returning a valid image
-            assert response.status_code == 200
-            r_stream = io.BytesIO(response.content)
-            echo_img = Image.open(r_stream)
-            difference = ImageChops.difference(echo_img, img).getbbox()
-            assert difference is None
-    # time.sleep(3)
-    shutil.rmtree(UPLOAD_DIR)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data.keys()) == 2
+    for path in invalid_images:
+        response2 = client.post(
+            "/",
+            files={"file": open(path, "rb")},
+            headers={"Authorization": f"JWT {settings.secret_token}"},
+        )
+        assert response2.status_code == 400

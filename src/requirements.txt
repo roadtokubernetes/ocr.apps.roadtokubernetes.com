@@ -1,4 +1,5 @@
 fastapi
+black
 gunicorn
 uvicorn
 jinja2
